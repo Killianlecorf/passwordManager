@@ -34,11 +34,6 @@ else
                     </button>
                 </div>
             </div>
-            <div class="col-auto">
-                <button class="btn btn-primary" @onclick="NavigateToNewPassword">
-                    Add New Password
-                </button>
-            </div>
         </div>
 
         <div class="row mb-3">
@@ -81,20 +76,6 @@ else
         NavigationManager.NavigateTo("login");
     }
 
-    private void NavigateToNewPassword()
-    {
-        NavigationManager.NavigateTo("password/new");
-    }
-
-    private void NavigateToEdit(Guid id)
-    {
-        NavigationManager.NavigateTo($"password/edit/{id}");
-    }
-
-    private async Task CopyToClipboard(string text)
-    {
-        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
-    }
 
     private void TogglePasswordVisibility(Guid passwordId)
     {

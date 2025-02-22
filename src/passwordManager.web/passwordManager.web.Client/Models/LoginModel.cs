@@ -26,6 +26,7 @@ namespace passwordManager.web.Client.Models
     }
 }
 
+
 // filepath: /c:/Users/Killian/source/repos/Killianlecorf/passwordManager/src/passwordManager.web/passwordManager.web.Client/Models/RegisterResponse.cs
 namespace passwordManager.web.Client.Models
 {
