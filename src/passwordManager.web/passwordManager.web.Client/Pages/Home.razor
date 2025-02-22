@@ -62,6 +62,10 @@
                     <div class="mb-3">
                         <label for="passwordValue" class="form-label">Password</label>
                         <InputText id="passwordValue" class="form-control" @bind-Value="newPassword.PasswordValue" />
+                        <div class="d-flex mt-2">
+                            <InputNumber id="passwordLength" class="form-control me-2" @bind-Value="passwordLength" min="8" max="128" />
+                            <button class="btn btn-secondary" @onclick="GeneratePassword">Generate Password</button>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="url" class="form-label">URL</label>
@@ -92,6 +96,7 @@
     private bool isEditing = false;
     private string searchTerm = string.Empty;
     private string selectedCategory = string.Empty;
+    private int passwordLength = 12;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -202,6 +207,14 @@
     {
         await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
         NavigationManager.NavigateTo("/login");
+    }
+
+    private void GeneratePassword()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+        var random = new Random();
+        newPassword.PasswordValue = new string(Enumerable.Repeat(chars, passwordLength)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
     }
 
     public class Password
