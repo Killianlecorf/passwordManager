@@ -1,0 +1,79 @@
+﻿@page "/login"
+@using PasswordManager.Web.Client.Models
+@using System.Net.Http
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@rendermode InteractiveWebAssembly
+
+<PageTitle>Login</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h1>Login</h1>
+            <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <label for="Username">Username:</label>
+                    <InputText id="Username" @bind-Value="loginModel.Username" class="form-control" />
+                    <ValidationMessage For="@(() => loginModel.Username)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <InputText type="password" id="password" @bind-Value="loginModel.Password" class="form-control" />
+                    <ValidationMessage For="@(() => loginModel.Password)" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Login</button>
+            </EditForm>
+
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <div class="alert alert-danger mt-3">
+                    @error
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginRequest loginModel = new();
+    private string error = string.Empty;
+    [Parameter][SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private async Task HandleLogin()
+    {
+        error = string.Empty;
+        var response = await Http.PostAsJsonAsync("https://localhost:7099/api/users/login", loginModel);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var responseContent = await response.Content.ReadFromJsonAsync<LoginResponse>();
+            if (responseContent != null && !string.IsNullOrEmpty(responseContent.Token))
+            {
+                await JS.InvokeVoidAsync("localStorage.setItem", "authToken", responseContent.Token);
+
+                var returnUrl = string.IsNullOrEmpty(ReturnUrl) ? "/" : ReturnUrl;
+                NavigationManager.NavigateTo(returnUrl);
+            }
+            else
+            {
+                error = "Login failed. Invalid response from server.";
+            }
+        }
+        else
+        {
+            error = "Login failed. Please check your credentials.";
+            var responseContent = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"Error: {responseContent}");
+        }
+    }
+
+    [Inject]
+    private IJSRuntime JS { get; set; }
+}

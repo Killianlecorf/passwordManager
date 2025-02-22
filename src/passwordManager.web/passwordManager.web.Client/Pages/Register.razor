@@ -1,0 +1,64 @@
+﻿@page "/register"
+@using PasswordManager.Web.Client.Models
+@using System.Net.Http
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@rendermode InteractiveWebAssembly
+
+<PageTitle>Register</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h1>Register</h1>
+            <EditForm Model="registerModel" OnValidSubmit="HandleRegister">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <label for="Username">Username:</label>
+                    <InputText id="Username" @bind-Value="registerModel.Username" class="form-control" />
+                    <ValidationMessage For="@(() => registerModel.Username)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <InputText type="password" id="password" @bind-Value="registerModel.Password" class="form-control" />
+                    <ValidationMessage For="@(() => registerModel.Password)" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Register</button>
+            </EditForm>
+
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <div class="alert alert-danger mt-3">
+                    @error
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterRequest registerModel = new();
+    private string error = string.Empty;
+
+    private async Task HandleRegister()
+    {
+        error = string.Empty;
+        var response = await Http.PostAsJsonAsync("https://localhost:7099/api/users/", registerModel);
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/login");
+        }
+        else
+        {
+            error = "Registration failed. Please try again.";
+            var responseContent = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"Error: {responseContent}");
+        }
+    }
+}

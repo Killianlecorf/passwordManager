@@ -1,0 +1,92 @@
+﻿@page "/"
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveWebAssembly
+
+<PageTitle>Password Manager</PageTitle>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (!isAuthenticated)
+{
+    <div class="text-center">
+        <h1>Welcome to Password Manager</h1>
+        <p>Please log in to access your passwords.</p>
+        <button class="btn btn-primary" @onclick="NavigateToLogin">Login</button>
+    </div>
+}
+else
+{
+    <div class="container">
+        <div class="row mb-3">
+            <div class="col">
+                <h1>My Passwords</h1>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-primary" @onclick="HandleLogout">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <input type="text" class="form-control" placeholder="Search..."
+                       @bind-value="searchTerm" />
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" @bind="selectedCategory">
+                    <option value="">All Categories</option>
+                    @foreach (var category in categories)
+                    {
+                        <option value="@category">@category</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private bool isAuthenticated = false;
+    private string searchTerm = "";
+    private HashSet<Guid> visiblePasswords = new();
+    private string selectedCategory = "";
+    private List<string> categories = new();
+
+    private async Task HandleLogout()
+    {
+        await AuthService.Logout();
+        isAuthenticated = false;
+        NavigationManager.NavigateTo("/login", true);
+    }
+
+
+
+    private void NavigateToLogin()
+    {
+        NavigationManager.NavigateTo("login");
+    }
+
+
+    private void TogglePasswordVisibility(Guid passwordId)
+    {
+        if (visiblePasswords.Contains(passwordId))
+        {
+            visiblePasswords.Remove(passwordId);
+        }
+        else
+        {
+            visiblePasswords.Add(passwordId);
+        }
+    }
+
+}
