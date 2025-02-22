@@ -1,19 +1,63 @@
-﻿@* @page "/login" *@
-@* @inject HttpClient HttpClient *@
-@* @inject NavigationManager Navigation *@
+﻿@page "/login"
+@using PasswordManager.Web.Client.Models
+@using PasswordManager.Web.Client.Services
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveWebAssembly
 
+<PageTitle>Login</PageTitle>
 
-@* <h3>Connexion</h3> *@
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h1>Login</h1>
+            <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
 
-@* <EditForm Model="loginModel" OnValidSubmit="HandleLogin"> *@
-@*     <DataAnnotationsValidator /> *@
-@*     <div> *@
-@*         <label>Nom d'utilisateur :</label> *@
-@*         <InputText @bind-Value="loginModel.Username" /> *@
-@*     </div> *@
-@*     <div> *@
-@*         <label>Mot de passe :</label> *@
-@*         <InputText @bind-Value="loginModel.Password" type="password" /> *@
-@*     </div> *@
-@*     <button type="submit">Se connecter</button> *@
-@* </EditForm> *@
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <InputText id="email" @bind-Value="loginModel.Email" class="form-control" />
+                    <ValidationMessage For="@(() => loginModel.Email)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <InputText type="password" id="password" @bind-Value="loginModel.Password" class="form-control" />
+                    <ValidationMessage For="@(() => loginModel.Password)" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Login</button>
+            </EditForm>
+
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <div class="alert alert-danger mt-3">
+                    @error
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginRequest loginModel = new();
+    private string error = string.Empty;
+    [Parameter][SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private async Task HandleLogin()
+    {
+        error = string.Empty;
+        var result = await AuthService.Login(loginModel);
+
+        if (result)
+        {
+            var returnUrl = string.IsNullOrEmpty(ReturnUrl) ? "/" : ReturnUrl;
+            NavigationManager.NavigateTo(returnUrl);
+        }
+        else
+        {
+            error = "Login failed. Please check your credentials.";
+        }
+    }
+}
