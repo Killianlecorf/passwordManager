@@ -23,6 +23,18 @@ namespace PasswordManager.api.Controllers
             return await _context.Passwords.ToListAsync();
         }
 
+        [HttpGet("user/{userId}")]
+        public async Task<ActionResult<IEnumerable<Password>>> GetPasswordsByUserId(int userId)
+        {
+            var user = await _context.Users.Include(u => u.Passwords).FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            return Ok(user.Passwords);
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<Password>> GetPasswordById(int id)
         {
@@ -45,7 +57,7 @@ namespace PasswordManager.api.Controllers
                 return NotFound("User not found");
             }
 
-            password.PasswordValue = BCrypt.Net.BCrypt.HashPassword(password.PasswordValue);
+            password.PasswordValue = password.PasswordValue;
 
             user.Passwords ??= new List<Password>();
             user.Passwords.Add(password);

@@ -145,6 +145,44 @@ namespace PasswordManager.api.Controllers
             return Ok(new { Token = tokenString });
         }
 
+        [HttpPost("decode")]
+        public IActionResult DecodeToken([FromBody] string token)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = _configuration["Jwt:Key"];
+            if (key == null)
+            {
+                return StatusCode(500, "JWT key is not configured.");
+            }
+
+            var keyBytes = Encoding.ASCII.GetBytes(key);
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+                ValidateIssuer = false,
+                ValidateAudience = false
+            };
+
+            try
+            {
+                var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
+                var userIdClaim = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name);
+
+                if (userIdClaim == null)
+                {
+                    return BadRequest("Invalid token: User ID not found.");
+                }
+
+                return Ok(new { UserId = userIdClaim.Value });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Invalid token: {ex.Message}");
+            }
+        }
+
+
         private bool UserExists(int id)
         {
             return _context.Users.Any(e => e.Id == id);
