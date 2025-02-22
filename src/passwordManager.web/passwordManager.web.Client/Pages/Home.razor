@@ -16,24 +16,72 @@
                     <i class="bi bi-box-arrow-right"></i> Logout
                 </button>
             </div>
+            <div class="mt-3 d-flex">
+                <p class="me-2">send a empty field for display all passwords:</p>
+                <input type="text" class="form-control me-2" placeholder="Search by name" @bind="searchTerm" @bind:event="oninput" />
+                <InputSelect class="form-control me-2" @bind-Value="selectedCategory">
+                    <option value="">All</option>
+                    <option value="Jeu">Jeu</option>
+                    <option value="Reseau sociaux">Réseau sociaux</option>
+                    <option value="Application">Application</option>
+                </InputSelect>
+                <button class="btn btn-secondary" @onclick="FilterPasswords">Search</button>
+            </div>
             <div class="mt-3">
                 @if (passwords == null)
                 {
                     <p>Loading...</p>
                 }
-                else if (!passwords.Any())
+                else if (!filteredPasswords.Any())
                 {
-                    <p>No passwords found.</p>
+                    <p>No passwords found</p>
                 }
                 else
                 {
                     <ul>
-                        @foreach (var password in passwords)
+                        @foreach (var password in filteredPasswords)
                         {
-                            <li>@password.Name: @password.PasswordValue</li>
+                            <li>
+                                <a href="@password.Url" target="_blank">@password.Name</a>: @password.PasswordValue categorie: @password.Categorie
+                                <button class="btn btn-danger btn-sm" @onclick="() => DeletePassword(password.Id)">Supprimer</button>
+                                <button class="btn btn-warning btn-sm" @onclick="() => EditPassword(password)">Modifier</button>
+                            </li>
                         }
                     </ul>
                 }
+            </div>
+            <div class="mt-3">
+                <h2>@(isEditing ? "Edit Password" : "Add New Password")</h2>
+                <EditForm Model="newPassword" OnValidSubmit="@(isEditing ? UpdatePassword : AddPassword)">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <InputText id="name" class="form-control" @bind-Value="newPassword.Name" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="passwordValue" class="form-label">Password</label>
+                        <InputText id="passwordValue" class="form-control" @bind-Value="newPassword.PasswordValue" />
+                        <div class="d-flex mt-2">
+                            <InputNumber id="passwordLength" class="form-control me-2" @bind-Value="passwordLength" min="8" max="128" />
+                            <button class="btn btn-secondary" @onclick="GeneratePassword">Generate Password</button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="url" class="form-label">URL</label>
+                        <InputText id="url" class="form-control" @bind-Value="newPassword.Url" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="categorie" class="form-label">Category</label>
+                        <InputSelect id="categorie" class="form-control" @bind-Value="newPassword.Categorie">
+                            <option value="">-- Select your categorie -- </option>
+                            <option value="Jeu">Jeu</option>
+                            <option value="Reseau sociaux">Réseau sociaux</option>
+                            <option value="Application">Application</option>
+                        </InputSelect>
+                    </div>
+                    <button type="submit" class="btn btn-primary">@((isEditing ? "Update Password" : "Add Password"))</button>
+                </EditForm>
             </div>
         </div>
     </div>
@@ -42,7 +90,13 @@
 @code {
     private bool _isFirstRender = true;
     private List<Password> passwords;
+    private List<Password> filteredPasswords;
     private int userId;
+    private Password newPassword = new Password();
+    private bool isEditing = false;
+    private string searchTerm = string.Empty;
+    private string selectedCategory = string.Empty;
+    private int passwordLength = 12;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -79,13 +133,88 @@
     private async Task LoadPasswords()
     {
         passwords = await Http.GetFromJsonAsync<List<Password>>("https://localhost:7099/api/passwords/user/" + userId);
+        FilterPasswords();
         StateHasChanged();
+    }
+
+    private void FilterPasswords()
+    {
+        var filtered = passwords;
+
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            filtered = filtered.Where(p => p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        if (!string.IsNullOrEmpty(selectedCategory))
+        {
+            filtered = filtered.Where(p => p.Categorie == selectedCategory).ToList();
+        }
+
+        filteredPasswords = filtered;
+    }
+
+    private async Task AddPassword()
+    {
+        newPassword.UserId = userId;
+        var response = await Http.PostAsJsonAsync("https://localhost:7099/api/passwords", newPassword);
+        if (response.IsSuccessStatusCode)
+        {
+            newPassword = new Password();
+            await LoadPasswords();
+        }
+        else
+        {
+            // Handle error
+        }
+    }
+
+    private async Task UpdatePassword()
+    {
+        var response = await Http.PutAsJsonAsync($"https://localhost:7099/api/passwords/{newPassword.Id}", newPassword);
+        if (response.IsSuccessStatusCode)
+        {
+            newPassword = new Password();
+            isEditing = false;
+            await LoadPasswords();
+        }
+        else
+        {
+            // Handle error
+        }
+    }
+
+    private void EditPassword(Password password)
+    {
+        newPassword = password;
+        isEditing = true;
+    }
+
+    private async Task DeletePassword(int passwordId)
+    {
+        var response = await Http.DeleteAsync($"https://localhost:7099/api/passwords/{passwordId}");
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadPasswords();
+        }
+        else
+        {
+            // Handle error
+        }
     }
 
     private async Task Logout()
     {
         await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
         NavigationManager.NavigateTo("/login");
+    }
+
+    private void GeneratePassword()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+        var random = new Random();
+        newPassword.PasswordValue = new string(Enumerable.Repeat(chars, passwordLength)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
     }
 
     public class Password
@@ -96,8 +225,8 @@
         public string Url { get; set; }
         public int UserId { get; set; }
         public string Categorie { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 
     public class DecodeTokenResponse

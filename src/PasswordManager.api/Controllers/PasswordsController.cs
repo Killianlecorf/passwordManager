@@ -74,7 +74,7 @@ namespace PasswordManager.api.Controllers
                 return BadRequest();
             }
 
-            password.PasswordValue = BCrypt.Net.BCrypt.HashPassword(password.PasswordValue);
+            password.PasswordValue = password.PasswordValue;
 
             _context.Entry(password).State = EntityState.Modified;
 
